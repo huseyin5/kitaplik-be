@@ -1,7 +1,9 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
 import { apiRouter } from './routes';
+import { openapiSpec } from './config/openapi';
 import { notFoundHandler, errorHandler } from './middlewares/errorHandler';
 
 export function createApp(): Application {
@@ -20,6 +22,13 @@ export function createApp(): Application {
   // Health check
   app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Swagger UI — interaktif API dokümantasyonu / test arayüzü
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
+  // Ham OpenAPI JSON (örn. Postman/başka araçlara import için)
+  app.get('/docs.json', (_req: Request, res: Response) => {
+    res.json(openapiSpec);
   });
 
   // API route'ları
