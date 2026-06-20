@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { libraryService } from '../services/library.service';
+import { AppError } from '../utils/AppError';
 import {
   AddLibraryBookInput,
   ListLibraryQuery,
@@ -8,11 +9,16 @@ import {
 } from '../schemas/library.schema';
 
 /**
- * Auth henüz yok. Tek kullanıcı varsayımıyla user_id null geçiyoruz.
- * Auth eklenince burası `req.user?.id ?? null` olacak.
+ * Aktif kullanıcının id'si. `authenticate` middleware'i tüm kütüphane
+ * route'larından önce çalıştığı için `req.user` daima dolu olmalı; değilse
+ * (beklenmeyen durum) 401 fırlatırız ve asla null user verisine düşmeyiz.
  */
-function currentUserId(req: Request): string | null {
-  return req.user?.id ?? null;
+function currentUserId(req: Request): string {
+  const id = req.user?.id;
+  if (!id) {
+    throw new AppError(401, 'Oturum açmanız gerekiyor');
+  }
+  return id;
 }
 
 export const libraryController = {

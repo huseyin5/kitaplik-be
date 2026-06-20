@@ -1,5 +1,6 @@
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
+import { sanitizeDescription } from '../utils/text';
 import { NormalizedBook } from '../types/book';
 import { SearchBooksQuery } from '../schemas/books.schema';
 
@@ -138,7 +139,7 @@ export const openLibraryService = {
       coverUrl: coverFromId(work.covers?.[0]),
       publisher: null,
       publishedDate: null,
-      description: descriptionToString(work.description),
+      description: sanitizeDescription(descriptionToString(work.description)),
       pageCount: null,
     };
   },

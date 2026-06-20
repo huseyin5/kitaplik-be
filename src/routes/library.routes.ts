@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { libraryController } from '../controllers/library.controller';
 import { validate } from '../middlewares/validate';
-// İleride auth eklenince: import { authenticate } from '../middlewares/authenticate';
+import { authenticate } from '../middlewares/authenticate';
 import {
   addLibraryBookSchema,
   listLibraryQuerySchema,
@@ -11,7 +11,8 @@ import {
 
 export const libraryRouter = Router();
 
-// Auth eklenince tüm route'lara: libraryRouter.use(authenticate);
+// Tüm kütüphane route'ları kimlik doğrulaması gerektirir.
+libraryRouter.use(authenticate);
 
 // POST /api/library
 libraryRouter.post(

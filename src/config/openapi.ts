@@ -17,10 +17,55 @@ export const openapiSpec = {
   servers: [{ url: `http://localhost:${env.PORT}`, description: 'Yerel geliştirme' }],
   tags: [
     { name: 'Health', description: 'Sağlık kontrolü' },
+    { name: 'Auth', description: 'Kullanıcı kaydı ve girişi' },
     { name: 'Books', description: 'Dış API ile kitap arama ve detay' },
-    { name: 'Library', description: 'Kullanıcının kütüphanesi (CRUD)' },
+    { name: 'Library', description: 'Kullanıcının kütüphanesi (CRUD) — kimlik doğrulaması gerekir' },
   ],
   paths: {
+    '/api/auth/register': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Kayıt ol',
+        description: 'Yeni kullanıcı oluşturur ve oturum token\'ı döner. Kullanıcı adı benzersiz olmalıdır.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/Credentials' } },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Oluşturulan oturum',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AuthResult' } } },
+          },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '409': {
+            description: 'Kullanıcı adı zaten alınmış',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+          },
+        },
+      },
+    },
+    '/api/auth/login': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Giriş yap',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/Credentials' } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Oturum',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/AuthResult' } } },
+          },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+    },
     '/health': {
       get: {
         tags: ['Health'],
@@ -134,6 +179,7 @@ export const openapiSpec = {
       get: {
         tags: ['Library'],
         summary: 'Kütüphaneyi listele',
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: 'status',
@@ -167,6 +213,7 @@ export const openapiSpec = {
       post: {
         tags: ['Library'],
         summary: 'Kütüphaneye kitap ekle',
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -192,6 +239,7 @@ export const openapiSpec = {
       patch: {
         tags: ['Library'],
         summary: 'Okuma durumunu güncelle',
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: 'id',
@@ -228,6 +276,7 @@ export const openapiSpec = {
       delete: {
         tags: ['Library'],
         summary: 'Kütüphaneden sil',
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: 'id',
@@ -300,6 +349,33 @@ export const openapiSpec = {
           createdAt: { type: 'string', format: 'date-time' },
         },
       },
+      Credentials: {
+        type: 'object',
+        required: ['username', 'password'],
+        properties: {
+          username: {
+            type: 'string',
+            minLength: 3,
+            maxLength: 30,
+            pattern: '^[a-zA-Z0-9_]+$',
+            example: 'ali_veli',
+          },
+          password: { type: 'string', minLength: 6, example: 'gizli123' },
+        },
+      },
+      AuthResult: {
+        type: 'object',
+        properties: {
+          token: { type: 'string', description: 'Bearer access token' },
+          user: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              username: { type: 'string', example: 'ali_veli' },
+            },
+          },
+        },
+      },
       Error: {
         type: 'object',
         properties: {
@@ -308,9 +384,21 @@ export const openapiSpec = {
         },
       },
     },
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Giriş/kayıt sonrası dönen token: `Authorization: Bearer <token>`',
+      },
+    },
     responses: {
       BadRequest: {
         description: 'Geçersiz istek / validasyon hatası',
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+      },
+      Unauthorized: {
+        description: 'Kimlik doğrulaması gerekli veya geçersiz',
         content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
       },
       NotFound: {

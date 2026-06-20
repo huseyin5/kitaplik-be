@@ -1,5 +1,6 @@
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
+import { sanitizeDescription } from '../utils/text';
 import { NormalizedBook } from '../types/book';
 import { SearchBooksQuery } from '../schemas/books.schema';
 
@@ -42,6 +43,24 @@ function extractIsbn(info: GoogleVolumeInfo): string | null {
   return isbn13?.identifier ?? isbn10?.identifier ?? null;
 }
 
+/**
+ * Google kapak URL'sini iyileştirir: çirkin sayfa kıvrımını (edge=curl)
+ * kaldırır ve küçük küçük resimleri (zoom=1, ~128px) daha keskin görünmesi
+ * için zoom=2'ye (~300px) yükseltir. Zaten büyük olan görseller değişmez.
+ */
+function upgradeGoogleCover(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('books.google')) {
+      u.searchParams.delete('edge');
+      if (u.searchParams.get('zoom') === '1') u.searchParams.set('zoom', '2');
+    }
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** En büyük mevcut kapak görselini seçer, http -> https'e çevirir. */
 function extractCover(info: GoogleVolumeInfo): string | null {
   const links = info.imageLinks;
@@ -54,7 +73,7 @@ function extractCover(info: GoogleVolumeInfo): string | null {
     links.thumbnail ??
     links.smallThumbnail ??
     null;
-  return best ? best.replace(/^http:/, 'https:') : null;
+  return best ? upgradeGoogleCover(best.replace(/^http:/, 'https:')) : null;
 }
 
 function normalizeVolume(volume: GoogleVolume): NormalizedBook {
@@ -68,7 +87,7 @@ function normalizeVolume(volume: GoogleVolume): NormalizedBook {
     coverUrl: extractCover(info),
     publisher: info.publisher ?? null,
     publishedDate: info.publishedDate ?? null,
-    description: info.description ?? null,
+    description: sanitizeDescription(info.description),
     pageCount: info.pageCount ?? null,
   };
 }
