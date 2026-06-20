@@ -1,16 +1,19 @@
 /**
  * Vercel Serverless Function girişi.
  *
- * Express uygulaması zaten bir `(req, res)` handler'ı olduğundan app'i default
- * export ediyoruz; `vercel.json`'daki rewrite tüm istekleri buraya yönlendirir.
- * Express orijinal `req.url`'i gördüğü için `/health`, `/api/*` ve `/docs`
- * route'ları olduğu gibi çalışır.
+ * Vercel, fonksiyon dosyasının default export'unun DOĞRUDAN bir fonksiyon (ya
+ * da http.Server) olmasını ister. Bu yüzden `export default createApp()` yerine
+ * gerçek bir `handler` fonksiyonu export edip Express app'ine delege ediyoruz.
+ * Express app'i `(req, res)` ile çağrılabilir; orijinal `req.url` korunduğu için
+ * `/health`, `/api/*` ve `/docs` route'ları olduğu gibi çalışır.
  *
- * Not: Bu dosya `server.ts`'i (app.listen) IMPORT ETMEZ; serverless ortamda
- * port dinlenmez, yalnızca handler export edilir.
+ * Not: `server.ts` (app.listen) import EDİLMEZ; serverless'te port dinlenmez.
  */
 import { createApp } from '../src/app';
 
+// Express app'i soğuk başlangıçta bir kez kur.
 const app = createApp();
 
-export default app;
+export default function handler(req: any, res: any) {
+  return app(req, res);
+}
