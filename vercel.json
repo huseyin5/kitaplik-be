@@ -2,5 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api" }
+  ],
+  "crons": [
+    { "path": "/api/push/run?slot=morning", "schedule": "0 6 * * *" },
+    { "path": "/api/push/run?slot=night", "schedule": "0 20 * * *" }
   ]
 }

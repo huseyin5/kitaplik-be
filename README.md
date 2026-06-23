@@ -142,6 +142,32 @@ dillerdeki kitaplar bulunabilir. Kitap kapağı görseli döndürülmez.
 }
 ```
 
+### Bildirimler (Web Push)
+
+| Method | Endpoint | Açıklama |
+| --- | --- | --- |
+| `GET` | `/api/push/public-key` | Tarayıcı aboneliği için VAPID public key |
+| `POST` | `/api/push/subscribe` | Aboneliği kaydeder (PushSubscription) |
+| `POST` | `/api/push/unsubscribe` | Aboneliği siler (`{ "endpoint": "..." }`) |
+| `POST` | `/api/push/send` | **Özel mesajla** anlık bildirim gönderir (Swagger'dan) |
+| `GET` | `/api/push/run?slot=morning\|night` | Zamanlanmış hazır mesaj (Vercel Cron tetikler) |
+
+**Kurulum:**
+
+1. `supabase/migrations/0002_push_subscriptions.sql`'i Supabase SQL Editor'de çalıştır.
+2. VAPID anahtarları üret ve `.env`'e ekle:
+   ```bash
+   node -e "console.log(require('web-push').generateVAPIDKeys())"
+   ```
+   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `PUSH_CRON_SECRET` doldur.
+3. Üretimde (Vercel): aynı env'leri ekle. Cron, `/api/push/run`'ı her gün **06:00 ve 20:00 UTC** (TR 09:00 / 23:00) çağırır. Vercel Cron'u `Authorization: Bearer $CRON_SECRET` ile çağırdığından, Vercel'de `CRON_SECRET` env'ini `PUSH_CRON_SECRET` ile **aynı** değere ayarla.
+
+**Swagger'dan özel mesaj göndermek:** `/docs` → `POST /api/push/send` → gövdeye `body` (ve istersen `title`, `slot`) yaz, `PUSH_CRON_SECRET` tanımlıysa `key` alanına gizli anahtarı gir → Execute. Tüm abonelere anlık bildirim gider.
+
+```json
+{ "title": "Zeliş’in Kütüphanesi", "body": "Bugün ne okuyoruz? 🐱", "slot": "default", "key": "<PUSH_CRON_SECRET>" }
+```
+
 ## Hata Yönetimi
 
 Tüm hatalar `{ "error": "...", "details"?: ... }` formatında döner:

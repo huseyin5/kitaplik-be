@@ -21,6 +21,13 @@ const envSchema = z.object({
 
   GOOGLE_BOOKS_API_KEY: z.string().optional(),
   OPEN_LIBRARY_CONTACT: z.string().default('contact@example.com'),
+
+  // Web Push (VAPID) — bildirimler. Yoksa push uçları 503 döner.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:contact@example.com'),
+  // Zamanlanmış gönderim ucunu (cron) koruyan gizli anahtar.
+  PUSH_CRON_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

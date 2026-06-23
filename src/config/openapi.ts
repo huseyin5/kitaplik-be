@@ -19,6 +19,7 @@ export const openapiSpec = {
     { name: 'Health', description: 'Sağlık kontrolü' },
     { name: 'Books', description: 'Dış API ile kitap arama ve detay' },
     { name: 'Library', description: 'Paylaşımlı kütüphane (CRUD) — kimlik doğrulaması gerekmez' },
+    { name: 'Push', description: 'Web push bildirimleri (abonelik + gönderim)' },
   ],
   paths: {
     '/health': {
@@ -236,6 +237,98 @@ export const openapiSpec = {
         },
       },
     },
+    '/api/push/public-key': {
+      get: {
+        tags: ['Push'],
+        summary: 'VAPID public key',
+        description: 'Tarayıcının push aboneliği için kullandığı genel anahtarı döner.',
+        responses: {
+          '200': {
+            description: 'Public key',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { publicKey: { type: 'string', nullable: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/push/subscribe': {
+      post: {
+        tags: ['Push'],
+        summary: 'Push aboneliği kaydet',
+        description: 'Tarayıcının PushSubscription.toJSON() çıktısını kaydeder.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/PushSubscription' } },
+          },
+        },
+        responses: {
+          '201': { description: 'Kaydedildi' },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '503': { description: 'Bildirimler yapılandırılmamış' },
+        },
+      },
+    },
+    '/api/push/unsubscribe': {
+      post: {
+        tags: ['Push'],
+        summary: 'Push aboneliğini sil',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['endpoint'],
+                properties: { endpoint: { type: 'string', format: 'uri' } },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'Silindi' }, '400': { $ref: '#/components/responses/BadRequest' } },
+      },
+    },
+    '/api/push/send': {
+      post: {
+        tags: ['Push'],
+        summary: 'Özel mesajla bildirim gönder',
+        description:
+          'Yazdığın başlık/mesajı tüm abonelere anlık push olarak gönderir. ' +
+          'Sunucuda PUSH_CRON_SECRET tanımlıysa "key" alanı (veya Authorization: Bearer <secret>) zorunludur.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/SendPush' } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Gönderim sonucu',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ok: { type: 'boolean', example: true },
+                    sent: { type: 'integer', example: 1 },
+                    removed: { type: 'integer', example: 0 },
+                  },
+                },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/BadRequest' },
+          '401': { description: 'Geçersiz key' },
+          '503': { description: 'Bildirimler yapılandırılmamış' },
+        },
+      },
+    },
   },
   components: {
     schemas: {
@@ -288,6 +381,35 @@ export const openapiSpec = {
           source: { type: 'string' },
           status: { $ref: '#/components/schemas/ReadingStatus' },
           createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      PushSubscription: {
+        type: 'object',
+        required: ['endpoint', 'keys'],
+        properties: {
+          endpoint: { type: 'string', format: 'uri' },
+          keys: {
+            type: 'object',
+            required: ['p256dh', 'auth'],
+            properties: {
+              p256dh: { type: 'string' },
+              auth: { type: 'string' },
+            },
+          },
+        },
+      },
+      SendPush: {
+        type: 'object',
+        required: ['body'],
+        properties: {
+          title: { type: 'string', example: 'Zeliş’in Kütüphanesi', description: 'Bildirim başlığı (opsiyonel)' },
+          body: { type: 'string', example: 'Merhaba! Bugün ne okuyoruz? 🐱', description: 'Bildirim mesajı (zorunlu)' },
+          slot: {
+            type: 'string',
+            enum: ['morning', 'night', 'default'],
+            description: 'Tıklanınca açılan kedili popup’ın türü (opsiyonel)',
+          },
+          key: { type: 'string', description: 'PUSH_CRON_SECRET tanımlıysa zorunlu' },
         },
       },
       Error: {
