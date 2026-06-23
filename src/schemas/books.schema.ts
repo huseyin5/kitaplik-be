@@ -7,7 +7,6 @@ export const searchBooksQuerySchema = z.object({
     .trim()
     .min(1, 'Arama terimi boş olamaz')
     .max(200, 'Arama terimi çok uzun'),
-  by: z.enum(['title', 'author']).optional(),
   limit: z.coerce.number().int().min(1).max(40).default(20),
 });
 

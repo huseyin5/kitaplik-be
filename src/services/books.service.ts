@@ -9,7 +9,7 @@ const searchCache = new TTLCache<NormalizedBook[]>(DEFAULT_CACHE_TTL_MS);
 const detailCache = new TTLCache<NormalizedBook>(DEFAULT_CACHE_TTL_MS);
 
 function searchCacheKey(params: SearchBooksQuery): string {
-  return `search:${params.by ?? 'any'}:${params.limit}:${params.q.toLowerCase()}`;
+  return `search:${params.limit}:${params.q.toLowerCase()}`;
 }
 
 /**

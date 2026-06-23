@@ -11,7 +11,6 @@ export const addLibraryBookSchema = z.object({
   title: z.string().trim().min(1, 'Başlık zorunlu'),
   authors: z.array(z.string().trim().min(1)).default([]),
   isbn: z.string().trim().min(1).nullable().optional(),
-  coverUrl: z.string().url('Geçerli bir kapak URL girin').nullable().optional(),
   publisher: z.string().trim().min(1).nullable().optional(),
   publishedDate: z.string().trim().min(1).nullable().optional(),
   description: z.string().trim().nullable().optional(),

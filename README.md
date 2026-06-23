@@ -21,7 +21,7 @@ src/
   schemas/       Zod şemaları (request validasyonu)
   middlewares/   validate, errorHandler
   types/         paylaşılan tipler
-  utils/         AppError, TTL cache, kapak (cover) URL yardımcıları
+  utils/         AppError, TTL cache, metin temizleme yardımcıları
   app.ts         express kurulumu
   server.ts      entry point
 supabase/
@@ -85,16 +85,12 @@ Tüm endpoint'ler `/api` altında.
 
 | Query | Tip | Açıklama |
 | --- | --- | --- |
-| `q` | string (zorunlu) | Arama terimi |
-| `by` | `title` \| `author` | Başlık/yazar bazlı arama (opsiyonel) |
+| `q` | string (zorunlu) | Arama terimi (başlık veya yazar — tek alan) |
 | `limit` | number (1–40, vars. 20) | Sonuç sayısı |
 
-Google Books'ta arar, sonuç yoksa Open Library'ye düşer. Normalize edilmiş liste döner.
-
-**Kapak görselleri:** Google Books içerik uçları sık sık görsel döndürmediğinden,
-bir kitabın Google görseli yoksa ISBN üzerinden güvenilir **Open Library kapak
-CDN**'ine (`covers.openlibrary.org`) düşülür. Böylece kapak gelme oranı belirgin
-şekilde artar.
+Tek bir arama alanı kullanılır; başlık/yazar ayrımı yoktur. Google Books'ta arar,
+sonuç yoksa Open Library'ye düşer. Dil kısıtlaması uygulanmaz; böylece tüm
+dillerdeki kitaplar bulunabilir. Kitap kapağı görseli döndürülmez.
 
 ```json
 {
@@ -106,7 +102,6 @@ CDN**'ine (`covers.openlibrary.org`) düşülür. Böylece kapak gelme oranı be
       "title": "Tutunamayanlar",
       "authors": ["Oğuz Atay"],
       "isbn": "9789754700114",
-      "coverUrl": "https://...",
       "publisher": "İletişim Yayınları",
       "publishedDate": "1972",
       "description": "...",
@@ -118,7 +113,7 @@ CDN**'ine (`covers.openlibrary.org`) düşülür. Böylece kapak gelme oranı be
 
 #### `GET /api/books/:source/:id`
 
-`source`: `google` | `openlibrary`. Tekil kitap detayını (büyük kapak dahil) döner. Bulunamazsa `404`.
+`source`: `google` | `openlibrary`. Tekil kitap detayını döner. Bulunamazsa `404`.
 
 ### Kütüphane (CRUD)
 
@@ -138,7 +133,6 @@ CDN**'ine (`covers.openlibrary.org`) düşülür. Böylece kapak gelme oranı be
   "title": "Tutunamayanlar",
   "authors": ["Oğuz Atay"],
   "isbn": "9789754700114",
-  "coverUrl": "https://...",
   "publisher": "İletişim Yayınları",
   "publishedDate": "1972",
   "description": "...",

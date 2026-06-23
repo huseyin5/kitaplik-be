@@ -1,7 +1,6 @@
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
 import { sanitizeDescription } from '../utils/text';
-import { resolveCoverUrl } from '../utils/cover';
 import { NormalizedBook } from '../types/book';
 import { SearchBooksQuery } from '../schemas/books.schema';
 
@@ -16,14 +15,6 @@ interface GoogleVolumeInfo {
   description?: string;
   pageCount?: number;
   industryIdentifiers?: Array<{ type: string; identifier: string }>;
-  imageLinks?: {
-    thumbnail?: string;
-    smallThumbnail?: string;
-    small?: string;
-    medium?: string;
-    large?: string;
-    extraLarge?: string;
-  };
 }
 
 interface GoogleVolume {
@@ -44,63 +35,19 @@ function extractIsbn(info: GoogleVolumeInfo): string | null {
   return isbn13?.identifier ?? isbn10?.identifier ?? null;
 }
 
-/**
- * Google kapak URL'sini iyileştirir: çirkin sayfa kıvrımını (edge=curl)
- * kaldırır ve küçük küçük resimleri (zoom=1, ~128px) daha keskin görünmesi
- * için zoom=2'ye (~300px) yükseltir. Zaten büyük olan görseller değişmez.
- */
-function upgradeGoogleCover(url: string): string {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes('books.google')) {
-      u.searchParams.delete('edge');
-      if (u.searchParams.get('zoom') === '1') u.searchParams.set('zoom', '2');
-    }
-    return u.toString();
-  } catch {
-    return url;
-  }
-}
-
-/** En büyük mevcut kapak görselini seçer, http -> https'e çevirir. */
-function extractCover(info: GoogleVolumeInfo): string | null {
-  const links = info.imageLinks;
-  if (!links) return null;
-  const best =
-    links.extraLarge ??
-    links.large ??
-    links.medium ??
-    links.small ??
-    links.thumbnail ??
-    links.smallThumbnail ??
-    null;
-  return best ? upgradeGoogleCover(best.replace(/^http:/, 'https:')) : null;
-}
-
 function normalizeVolume(volume: GoogleVolume): NormalizedBook {
   const info = volume.volumeInfo ?? {};
-  const isbn = extractIsbn(info);
   return {
     id: volume.id,
     source: 'google',
     title: info.title ?? 'Bilinmeyen başlık',
     authors: info.authors ?? [],
-    isbn,
-    // Google sık sık görsel döndürmez; bu durumda ISBN üzerinden güvenilir
-    // Open Library kapak CDN'ine düşeriz.
-    coverUrl: resolveCoverUrl(extractCover(info), isbn),
+    isbn: extractIsbn(info),
     publisher: info.publisher ?? null,
     publishedDate: info.publishedDate ?? null,
     description: sanitizeDescription(info.description),
     pageCount: info.pageCount ?? null,
   };
-}
-
-/** Arama tipini Google operatörüne çevirir (intitle: / inauthor:). */
-function buildQuery(q: string, by?: SearchBooksQuery['by']): string {
-  if (by === 'title') return `intitle:${q}`;
-  if (by === 'author') return `inauthor:${q}`;
-  return q;
 }
 
 async function fetchGoogle<T>(url: string): Promise<T> {
@@ -133,9 +80,8 @@ export const googleBooksService = {
   /** Kitap araması yapar; normalize edilmiş liste döner (boş olabilir). */
   async search(params: SearchBooksQuery): Promise<NormalizedBook[]> {
     const url = withKey(new URL(GOOGLE_BOOKS_BASE));
-    url.searchParams.set('q', buildQuery(params.q, params.by));
-    url.searchParams.set('langRestrict', 'tr');
-    url.searchParams.set('country', 'TR');
+    url.searchParams.set('q', params.q);
+    // Dil kısıtlaması yok: tüm dillerdeki kitaplar bulunabilsin (daha fazla sonuç).
     url.searchParams.set('maxResults', String(params.limit));
 
     const data = await fetchGoogle<GoogleBooksResponse>(url.toString());
@@ -145,7 +91,6 @@ export const googleBooksService = {
   /** Tekil kitap detayını getirir. Bulunamazsa null döner. */
   async getById(id: string): Promise<NormalizedBook | null> {
     const url = withKey(new URL(`${GOOGLE_BOOKS_BASE}/${encodeURIComponent(id)}`));
-    url.searchParams.set('country', 'TR');
 
     let res: Response;
     try {

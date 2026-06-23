@@ -11,7 +11,6 @@ export interface NormalizedBook {
   title: string;
   authors: string[];
   isbn: string | null;
-  coverUrl: string | null;
   publisher: string | null;
   publishedDate: string | null;
   description: string | null;

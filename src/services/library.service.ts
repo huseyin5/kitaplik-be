@@ -15,7 +15,6 @@ export interface LibraryBookRow {
   title: string;
   authors: string[];
   isbn: string | null;
-  cover_url: string | null;
   publisher: string | null;
   published_date: string | null;
   description: string | null;
@@ -32,7 +31,6 @@ export interface LibraryBookDto {
   title: string;
   authors: string[];
   isbn: string | null;
-  coverUrl: string | null;
   publisher: string | null;
   publishedDate: string | null;
   description: string | null;
@@ -49,7 +47,6 @@ function toDto(row: LibraryBookRow): LibraryBookDto {
     title: row.title,
     authors: row.authors ?? [],
     isbn: row.isbn,
-    coverUrl: row.cover_url,
     publisher: row.publisher,
     publishedDate: row.published_date,
     description: row.description,
@@ -76,7 +73,6 @@ export const libraryService = {
         title: input.title,
         authors: input.authors,
         isbn: input.isbn ?? null,
-        cover_url: input.coverUrl ?? null,
         publisher: input.publisher ?? null,
         published_date: input.publishedDate ?? null,
         description: input.description ?? null,

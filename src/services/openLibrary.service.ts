@@ -1,7 +1,6 @@
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
 import { sanitizeDescription } from '../utils/text';
-import { coverUrlFromIsbn, coverUrlFromOlId } from '../utils/cover';
 import { NormalizedBook } from '../types/book';
 import { SearchBooksQuery } from '../schemas/books.schema';
 
@@ -17,8 +16,6 @@ interface OLSearchDoc {
   author_name?: string[];
   first_publish_year?: number;
   isbn?: string[];
-  cover_i?: number;
-  cover_edition_key?: string;
   publisher?: string[];
   number_of_pages_median?: number;
 }
@@ -32,7 +29,6 @@ interface OLWork {
   key: string;
   title?: string;
   description?: string | { value?: string };
-  covers?: number[];
 }
 
 /** "/works/OL45804W" -> "OL45804W" */
@@ -41,14 +37,12 @@ function workIdFromKey(key: string): string {
 }
 
 function normalizeDoc(doc: OLSearchDoc): NormalizedBook {
-  const isbn = doc.isbn?.[0] ?? null;
   return {
     id: workIdFromKey(doc.key),
     source: 'openlibrary',
     title: doc.title ?? 'Bilinmeyen başlık',
     authors: doc.author_name ?? [],
-    isbn,
-    coverUrl: coverUrlFromOlId(doc.cover_i) ?? coverUrlFromIsbn(isbn),
+    isbn: doc.isbn?.[0] ?? null,
     publisher: doc.publisher?.[0] ?? null,
     publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : null,
     description: null, // search.json açıklama döndürmez; detayda doldurulur
@@ -65,14 +59,12 @@ function descriptionToString(
 
 function buildSearchParams(params: SearchBooksQuery): URLSearchParams {
   const sp = new URLSearchParams();
-  if (params.by === 'title') sp.set('title', params.q);
-  else if (params.by === 'author') sp.set('author', params.q);
-  else sp.set('q', params.q);
+  sp.set('q', params.q);
   sp.set('limit', String(params.limit));
-  sp.set('language', 'tur');
+  // Dil kısıtlaması yok: tüm dillerdeki kitaplar bulunabilsin (daha fazla sonuç).
   sp.set(
     'fields',
-    'key,title,author_name,first_publish_year,isbn,cover_i,cover_edition_key,publisher,number_of_pages_median',
+    'key,title,author_name,first_publish_year,isbn,publisher,number_of_pages_median',
   );
   return sp;
 }
@@ -128,7 +120,6 @@ export const openLibraryService = {
       title: work.title ?? 'Bilinmeyen başlık',
       authors: [],
       isbn: null,
-      coverUrl: coverUrlFromOlId(work.covers?.[0]),
       publisher: null,
       publishedDate: null,
       description: sanitizeDescription(descriptionToString(work.description)),
