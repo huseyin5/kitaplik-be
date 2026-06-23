@@ -1,9 +1,9 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
 import { apiRouter } from './routes';
 import { openapiSpec } from './config/openapi';
+import { docsHtml } from './config/docsPage';
 import { notFoundHandler, errorHandler } from './middlewares/errorHandler';
 
 export function createApp(): Application {
@@ -24,11 +24,15 @@ export function createApp(): Application {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Swagger UI — interaktif API dokümantasyonu / test arayüzü
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
   // Ham OpenAPI JSON (örn. Postman/başka araçlara import için)
   app.get('/docs.json', (_req: Request, res: Response) => {
     res.json(openapiSpec);
+  });
+  // Swagger UI — Swagger UI varlıkları CDN'den yüklenir, spec /docs.json'dan
+  // çekilir. (swagger-ui-express statik dosya servisi serverless/rewrite
+  // ortamlarında "SwaggerUIBundle is not defined" hatası verebiliyordu.)
+  app.get('/docs', (_req: Request, res: Response) => {
+    res.type('html').send(docsHtml);
   });
 
   // API route'ları
