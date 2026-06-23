@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { libraryService } from '../services/library.service';
-import { AppError } from '../utils/AppError';
 import {
   AddLibraryBookInput,
   ListLibraryQuery,
@@ -9,24 +8,17 @@ import {
 } from '../schemas/library.schema';
 
 /**
- * Aktif kullanıcının id'si. `authenticate` middleware'i tüm kütüphane
- * route'larından önce çalıştığı için `req.user` daima dolu olmalı; değilse
- * (beklenmeyen durum) 401 fırlatırız ve asla null user verisine düşmeyiz.
+ * Kimlik doğrulaması kaldırıldığından kütüphane herkese açık ve paylaşımlıdır.
+ * Tüm kayıtlar sahipsiz (user_id IS NULL) olarak tutulur.
  */
-function currentUserId(req: Request): string {
-  const id = req.user?.id;
-  if (!id) {
-    throw new AppError(401, 'Oturum açmanız gerekiyor');
-  }
-  return id;
-}
+const SHARED_USER_ID = null;
 
 export const libraryController = {
   /** POST /api/library */
   async add(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = req.body as AddLibraryBookInput;
-      const book = await libraryService.add(input, currentUserId(req));
+      const book = await libraryService.add(input, SHARED_USER_ID);
       res.status(201).json(book);
     } catch (err) {
       next(err);
@@ -37,7 +29,7 @@ export const libraryController = {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const filter = req.query as unknown as ListLibraryQuery;
-      const books = await libraryService.list(filter, currentUserId(req));
+      const books = await libraryService.list(filter, SHARED_USER_ID);
       res.json({ count: books.length, books });
     } catch (err) {
       next(err);
@@ -49,7 +41,7 @@ export const libraryController = {
     try {
       const { id } = req.params as unknown as LibraryIdParams;
       const { status } = req.body as UpdateLibraryBookInput;
-      const book = await libraryService.updateStatus(id, status, currentUserId(req));
+      const book = await libraryService.updateStatus(id, status, SHARED_USER_ID);
       res.json(book);
     } catch (err) {
       next(err);
@@ -60,7 +52,7 @@ export const libraryController = {
   async remove(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params as unknown as LibraryIdParams;
-      await libraryService.remove(id, currentUserId(req));
+      await libraryService.remove(id, SHARED_USER_ID);
       res.status(204).send();
     } catch (err) {
       next(err);

@@ -1,12 +1,12 @@
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
 import { sanitizeDescription } from '../utils/text';
+import { coverUrlFromIsbn, coverUrlFromOlId } from '../utils/cover';
 import { NormalizedBook } from '../types/book';
 import { SearchBooksQuery } from '../schemas/books.schema';
 
 const OPEN_LIBRARY_SEARCH = 'https://openlibrary.org/search.json';
 const OPEN_LIBRARY_BASE = 'https://openlibrary.org';
-const COVERS_BASE = 'https://covers.openlibrary.org/b';
 
 /** Open Library politikası gereği tanımlayıcı bir User-Agent. */
 const USER_AGENT = `KitaplikBE/1.0 (${env.OPEN_LIBRARY_CONTACT})`;
@@ -40,14 +40,6 @@ function workIdFromKey(key: string): string {
   return key.replace('/works/', '').replace(/^\/+/, '');
 }
 
-function coverFromIsbn(isbn: string | null, size: 'L' | 'M' = 'L'): string | null {
-  return isbn ? `${COVERS_BASE}/isbn/${isbn}-${size}.jpg` : null;
-}
-
-function coverFromId(coverId: number | undefined, size: 'L' | 'M' = 'L'): string | null {
-  return coverId ? `${COVERS_BASE}/id/${coverId}-${size}.jpg` : null;
-}
-
 function normalizeDoc(doc: OLSearchDoc): NormalizedBook {
   const isbn = doc.isbn?.[0] ?? null;
   return {
@@ -56,7 +48,7 @@ function normalizeDoc(doc: OLSearchDoc): NormalizedBook {
     title: doc.title ?? 'Bilinmeyen başlık',
     authors: doc.author_name ?? [],
     isbn,
-    coverUrl: coverFromId(doc.cover_i) ?? coverFromIsbn(isbn),
+    coverUrl: coverUrlFromOlId(doc.cover_i) ?? coverUrlFromIsbn(isbn),
     publisher: doc.publisher?.[0] ?? null,
     publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : null,
     description: null, // search.json açıklama döndürmez; detayda doldurulur
@@ -136,7 +128,7 @@ export const openLibraryService = {
       title: work.title ?? 'Bilinmeyen başlık',
       authors: [],
       isbn: null,
-      coverUrl: coverFromId(work.covers?.[0]),
+      coverUrl: coverUrlFromOlId(work.covers?.[0]),
       publisher: null,
       publishedDate: null,
       description: sanitizeDescription(descriptionToString(work.description)),

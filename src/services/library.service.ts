@@ -62,8 +62,8 @@ function toDto(row: LibraryBookRow): LibraryBookDto {
 
 export const libraryService = {
   /**
-   * Kütüphaneye kitap ekler. `userId` ileride auth eklenince
-   * `req.user.id`'den gelecek; şimdilik null geçilebilir.
+   * Kütüphaneye kitap ekler. Kimlik doğrulaması kaldırıldığı için `userId`
+   * daima null geçilir (paylaşımlı kütüphane).
    */
   async add(
     input: AddLibraryBookInput,
@@ -103,7 +103,7 @@ export const libraryService = {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Auth eklenince user_id'ye göre daraltılacak.
+    // Paylaşımlı kütüphane: sahipsiz (user_id IS NULL) kayıtlar listelenir.
     query = userId ? query.eq('user_id', userId) : query.is('user_id', null);
 
     if (filter.status) {

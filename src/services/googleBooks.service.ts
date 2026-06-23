@@ -1,6 +1,7 @@
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
 import { sanitizeDescription } from '../utils/text';
+import { resolveCoverUrl } from '../utils/cover';
 import { NormalizedBook } from '../types/book';
 import { SearchBooksQuery } from '../schemas/books.schema';
 
@@ -78,13 +79,16 @@ function extractCover(info: GoogleVolumeInfo): string | null {
 
 function normalizeVolume(volume: GoogleVolume): NormalizedBook {
   const info = volume.volumeInfo ?? {};
+  const isbn = extractIsbn(info);
   return {
     id: volume.id,
     source: 'google',
     title: info.title ?? 'Bilinmeyen başlık',
     authors: info.authors ?? [],
-    isbn: extractIsbn(info),
-    coverUrl: extractCover(info),
+    isbn,
+    // Google sık sık görsel döndürmez; bu durumda ISBN üzerinden güvenilir
+    // Open Library kapak CDN'ine düşeriz.
+    coverUrl: resolveCoverUrl(extractCover(info), isbn),
     publisher: info.publisher ?? null,
     publishedDate: info.publishedDate ?? null,
     description: sanitizeDescription(info.description),

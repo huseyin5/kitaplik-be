@@ -19,9 +19,9 @@ src/
   controllers/   route handler'lar
   services/      dış API çağrıları + DB işlemleri
   schemas/       Zod şemaları (request validasyonu)
-  middlewares/   validate, errorHandler, authenticate (placeholder)
-  types/         paylaşılan tipler + Express Request genişletmesi
-  utils/         AppError, TTL cache
+  middlewares/   validate, errorHandler
+  types/         paylaşılan tipler
+  utils/         AppError, TTL cache, kapak (cover) URL yardımcıları
   app.ts         express kurulumu
   server.ts      entry point
 supabase/
@@ -89,7 +89,12 @@ Tüm endpoint'ler `/api` altında.
 | `by` | `title` \| `author` | Başlık/yazar bazlı arama (opsiyonel) |
 | `limit` | number (1–40, vars. 20) | Sonuç sayısı |
 
-Google Books'ta arar, sonuç yoksa Open Library'ye düşer. Normalize edilmiş liste döner:
+Google Books'ta arar, sonuç yoksa Open Library'ye düşer. Normalize edilmiş liste döner.
+
+**Kapak görselleri:** Google Books içerik uçları sık sık görsel döndürmediğinden,
+bir kitabın Google görseli yoksa ISBN üzerinden güvenilir **Open Library kapak
+CDN**'ine (`covers.openlibrary.org`) düşülür. Böylece kapak gelme oranı belirgin
+şekilde artar.
 
 ```json
 {
@@ -153,8 +158,9 @@ Tüm hatalar `{ "error": "...", "details"?: ... }` formatında döner:
 - `502` — dış API'ye ulaşılamadı / dış servis hatası
 - `500` — beklenmeyen hata
 
-## Auth'a Hazırlık (henüz aktif değil)
+## Kimlik Doğrulama
 
-- `src/middlewares/authenticate.ts` — Supabase Auth JWT doğrulaması için placeholder. Şu an hiçbir route'a bağlı değil.
-- `src/types/express/index.d.ts` — `req.user` alanı için Express Request genişletmesi.
-- `library_books.user_id` — şimdilik nullable; auth eklenince `req.user.id` ile doldurulacak ve RLS politikaları aktive edilecek (migration'da yorum olarak hazır).
+Kimlik doğrulama tamamen **devre dışıdır**. Kayıt/giriş uçları yoktur ve hiçbir
+endpoint token gerektirmez. Kütüphane **paylaşımlıdır**: tüm kayıtlar sahipsiz
+(`user_id IS NULL`) olarak tutulur. `library_books.user_id` kolonu ileride auth
+tekrar eklenirse kullanılabilmesi için nullable olarak şemada bırakılmıştır.
